@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSN Studio — TSN 拓扑规划与仿真</title>
+<style>
+:root{
+  --bg:#f1f5f9; --panel:#ffffff; --border:#e2e8f0; --border2:#cbd5e1;
+  --text:#0f172a; --muted:#64748b; --muted2:#94a3b8;
+  --accent:#2563eb; --accent-soft:#eff6ff; --accent-text:#1d4ed8;
+  --ok:#16a34a; --ok-soft:#f0fdf4; --warn:#d97706; --warn-soft:#fffbeb;
+  --err:#dc2626; --err-soft:#fef2f2;
+  --radius:10px; --radius-s:6px;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font:14px/1.55 -apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;color:var(--text);background:var(--bg);display:grid;grid-template-rows:auto 1fr auto;overflow:hidden}
+
+/* ===== Header ===== */
+header{display:flex;align-items:center;gap:14px;padding:0 16px;height:52px;background:var(--panel);border-bottom:1px solid var(--border);z-index:30}
+.logo{display:flex;align-items:baseline;gap:8px;margin-right:6px}
+.logo b{font-size:16px;letter-spacing:.2px}
+.logo span{font-size:12px;color:var(--muted)}
+header .spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--border2);border-radius:var(--radius-s);background:#fff;color:var(--text);font-size:13px;cursor:pointer;transition:all .12s;white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent-text)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-text);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{height:26px;padding:0 8px;font-size:12px}
+.export-wrap{position:relative}
+.menu{position:absolute;top:36px;right:0;background:#fff;border:1px solid var(--border2);border-radius:var(--radius);box-shadow:0 8px 24px rgba(15,23,42,.14);min-width:230px;padding:6px;display:none;z-index:50}
+.menu.open{display:block}
+.menu button{display:block;width:100%;text-align:left;padding:8px 10px;border:0;background:none;font-size:13px;border-radius:var(--radius-s);cursor:pointer;color:var(--text)}
+.menu button:hover{background:var(--accent-soft);color:var(--accent-text)}
+.menu .sep{height:1px;background:var(--border);margin:5px 4px}
+.menu button small{display:block;color:var(--muted);font-size:11px;margin-top:1px}
+
+/* ===== Layout ===== */
+main{display:grid;grid-template-columns:258px 1fr 400px;min-height:0}
+aside{background:var(--panel);overflow-y:auto;min-height:0}
+aside.left{border-right:1px solid var(--border);display:flex;flex-direction:column}
+aside.right{border-left:1px solid var(--border);display:flex;flex-direction:column}
+.sec-title{font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;padding:12px 14px 6px}
+
+/* Palette */
+.palette{padding:4px 14px 12px;display:grid;gap:8px}
+.pal-item{display:flex;align-items:center;gap:10px;padding:10px;border:1px dashed var(--border2);border-radius:var(--radius);cursor:grab;background:#fcfdff;transition:all .12s;user-select:none}
+.pal-item:hover{border-color:var(--accent);border-style:solid;background:var(--accent-soft)}
+.pal-item:active{cursor:grabbing}
+.pal-item svg{flex:none}
+.pal-item .t{font-size:13px;font-weight:600}
+.pal-item .d{font-size:11px;color:var(--muted)}
+.pal-hint{font-size:11px;color:var(--muted2);padding:2px 14px 8px;line-height:1.5}
+
+/* Properties */
+.props{border-top:1px solid var(--border);flex:1;min-height:0;overflow-y:auto}
+.field{padding:6px 14px}
+.field label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+.field input,.field select{width:100%;height:30px;padding:0 8px;border:1px solid var(--border2);border-radius:var(--radius-s);font-size:13px;background:#fff;color:var(--text)}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.field .hint{font-size:11px;color:var(--muted2);margin-top:2px}
+.props .empty{padding:20px 14px;font-size:12px;color:var(--muted2);line-height:1.7}
+.props h4{padding:12px 14px 2px;font-size:13px}
+
+/* Canvas */
+.canvas-wrap{position:relative;min-width:0;min-height:0;background:#f8fafc}
+#canvas{width:100%;height:100%;display:block;cursor:default}
+.canvas-toolbar{position:absolute;top:12px;left:12px;display:flex;gap:8px;align-items:center;background:#fff;border:1px solid var(--border2);border-radius:var(--radius);padding:4px;box-shadow:0 2px 10px rgba(15,23,42,.06)}
+.seg{display:flex;border-radius:var(--radius-s);overflow:hidden;border:1px solid var(--border2)}
+.seg button{width:34px;height:28px;border:0;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.on{background:var(--accent);color:#fff}
+.zoomctl{display:flex;align-items:center;gap:2px}
+.zoomctl button{width:26px;height:26px;border:0;background:none;border-radius:var(--radius-s);cursor:pointer;font-size:15px;color:var(--muted)}
+.zoomctl button:hover{background:var(--bg);color:var(--accent-text)}
+.zoomctl span{font-size:11px;color:var(--muted);min-width:38px;text-align:center;font-family:var(--mono)}
+.canvas-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.canvas-hint>div{background:rgba(255,255,255,.92);border:1px solid var(--border2);border-radius:12px;padding:22px 30px;text-align:center;color:var(--muted);font-size:13px;line-height:2;box-shadow:0 4px 20px rgba(15,23,42,.06)}
+.canvas-hint b{color:var(--text)}
+.mode-tip{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.85);color:#fff;font-size:12px;padding:5px 14px;border-radius:99px;display:none}
+.mode-tip.show{display:block}
+
+/* Right panel */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--panel)}
+.tabs button{flex:1;height:38px;border:0;background:none;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.tabs button.on{color:var(--accent-text);border-bottom-color:var(--accent);font-weight:600}
+.tab-body{flex:1;overflow-y:auto;min-height:0;padding:12px 14px 20px}
+.tab-body.hidden{display:none}
+
+/* Flows list */
+.flow-card{border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px;background:#fff;transition:border-color .12s}
+.flow-card:hover{border-color:var(--border2)}
+.flow-head{display:flex;align-items:center;gap:8px}
+.flow-dot{width:10px;height:10px;border-radius:3px;flex:none}
+.flow-head b{font-size:13px}
+.flow-head .route{font-size:11px;color:var(--muted);margin-left:auto;font-family:var(--mono);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flow-meta{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+.chip{font-size:10.5px;padding:1px 7px;border-radius:99px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.prio{font-family:var(--mono)}
+.flow-card .ops{margin-left:auto;display:flex;gap:4px}
+.icon-btn{width:22px;height:22px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;color:var(--muted);font-size:12px;display:inline-flex;align-items:center;justify-content:center}
+.icon-btn:hover{color:var(--accent-text);border-color:var(--accent)}
+.icon-btn.danger:hover{color:var(--err);border-color:var(--err)}
+.flow-bad{margin-top:6px;font-size:11px;color:var(--err)}
+.add-flow-bar{display:flex;justify-content:center;padding:2px 0 10px}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.kpi{border:1px solid var(--border);border-radius:var(--radius);padding:9px 10px;background:#fff}
+.kpi .v{font-size:17px;font-weight:700;font-family:var(--mono)}
+.kpi .v small{font-size:10px;font-weight:400;color:var(--muted)}
+.kpi .l{font-size:11px;color:var(--muted);margin-top:1px}
+.kpi.bad .v{color:var(--err)}
+
+/* Gantt */
+.gantt-block{margin-bottom:14px}
+.gantt-block h5{font-size:12px;margin-bottom:5px;display:flex;align-items:baseline;gap:8px}
+.gantt-block h5 .port{font-family:var(--mono);color:var(--accent-text)}
+.gantt-block h5 .util{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400}
+.gantt-row{position:relative;height:26px;background:#fff;border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.gantt-row .be{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,#f8fafc,#f8fafc 6px,#f1f5f9 6px,#f1f5f9 12px)}
+.gantt-row .gb{position:absolute;top:0;bottom:0;background:#cbd5e1;opacity:.75}
+.gantt-row .slot{position:absolute;top:3px;bottom:3px;border-radius:3px;min-width:1px;cursor:default}
+.gantt-axis{position:relative;height:16px;margin-top:2px}
+.gantt-axis span{position:absolute;top:0;font-size:10px;color:var(--muted2);transform:translateX(-50%);font-family:var(--mono)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;padding:8px 0 2px}
+.legend .li{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.legend .sw{width:12px;height:9px;border-radius:2px}
+
+/* Table */
+table.res{width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+table.res th{background:var(--bg);text-align:left;padding:6px 8px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)}
+table.res td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+table.res td.mono{font-family:var(--mono);white-space:nowrap}
+.tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:99px}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.bad{background:var(--err-soft);color:var(--err)}
+.note{font-size:11.5px;color:var(--muted);background:var(--warn-soft);border:1px solid #fde68a;border-radius:var(--radius-s);padding:8px 10px;line-height:1.6;margin-top:14px}
+.empty-state{text-align:center;padding:44px 10px;color:var(--muted)}
+.empty-state .big{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:flex-start;justify-content:center;z-index:100;padding-top:9vh}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:14px;width:560px;max-width:94vw;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(15,23,42,.25)}
+.modal header{height:auto;padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center}
+.modal header b{font-size:15px}
+.modal header .x{margin-left:auto;border:0;background:none;font-size:18px;cursor:pointer;color:var(--muted)}
+.modal .body{padding:14px 18px;overflow-y:auto}
+.modal footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.fgrid .field{padding:0}
+.fgrid .wide{grid-column:1/-1}
+.route-preview{grid-column:1/-1;border:1px solid var(--border);border-radius:var(--radius-s);padding:8px 10px;font-size:12px;font-family:var(--mono);color:var(--muted);background:#f8fafc;min-height:36px}
+.route-preview.ok{color:var(--ok)}
+.route-preview.bad{color:var(--err)}
+
+/* Help */
+.help h5{margin:14px 0 6px;font-size:13px}
+.help p,.help li{font-size:12.5px;color:var(--muted);line-height:1.8}
+.help ol{padding-left:18px}
+.help code{font-family:var(--mono);background:var(--bg);padding:1px 5px;border-radius:4px;font-size:11.5px;color:var(--accent-text)}
+
+/* Toast & status */
+#toasts{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center}
+.toast{background:#0f172a;color:#fff;font-size:13px;padding:8px 16px;border-radius:99px;box-shadow:0 6px 20px rgba(15,23,42,.3);animation:tin .2s ease}
+.toast.err{background:var(--err)}
+.toast.ok{background:var(--ok)}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+footer.status{height:30px;display:flex;align-items:center;padding:0 14px;gap:14px;background:var(--panel);border-top:1px solid var(--border);font-size:11.5px;color:var(--muted)}
+footer .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+footer .right{margin-left:auto;font-family:var(--mono)}
+
+/* SVG node styles */
+.node{cursor:pointer}
+.node .box{transition:filter .12s}
+.node.selected .box{stroke:var(--accent);stroke-width:3}
+.node.linksrc .box{stroke:var(--accent);stroke-width:2.5;stroke-dasharray:5 3}
+.node text{user-select:none;pointer-events:none}
+.link{cursor:pointer}
+.link path.hit{stroke:transparent;stroke-width:14;fill:none}
+.link line.vis{stroke:#94a3b8;stroke-width:2}
+.link.selected line.vis{stroke:var(--accent);stroke-width:2.6}
+.link text{fill:var(--muted);font-size:10px;font-family:var(--mono)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><b>TSN Studio</b><span>TSN 拓扑规划 · 调度仿真 · 配置生成</span></div>
+  <div class="spacer"></div>
+  <button class="btn" id="btnDemo">载入示例</button>
+  <button class="btn" id="btnNew">新建</button>
+  <button class="btn primary" id="btnGen">⚡ 生成调度</button>
+  <div class="export-wrap">
+    <button class="btn" id="btnExport">导出 ▾</button>
+    <div class="menu" id="exportMenu">
+      <button id="expJson">TSNsched 输入 JSON<small>与 Script/generateSchedule.sh 兼容，交 Z3 后端精确求解</small></button>
+      <button id="expXml">NetConf 门控列表 XML<small>每交换机 TNtas/GCL 配置（合并单文件）</small></button>
+      <button id="expRes">调度结果 JSON<small>端口 GCL + 流延迟统计</small></button>
+      <div class="sep"></div>
+      <button id="expSave">保存工程文件<small>拓扑 + 流 + 设置，可重新打开</small></button>
+      <button id="expOpen">打开工程文件…</button>
+    </div>
+  </div>
+  <button class="btn" id="btnHelp">帮助</button>
+  <input type="file" id="fileOpen" accept=".json" style="display:none">
+</header>
+
+<main>
+  <!-- Left -->
+  <aside class="left">
+    <div class="sec-title">组件库（拖入画布）</div>
+    <div class="palette">
+      <div class="pal-item" draggable="true" data-type="switch">
+        <svg width="30" height="24" viewBox="0 0 30 24"><rect x="1" y="6" width="28" height="12" rx="2.5" fill="#fff" stroke="#1e293b" stroke-width="1.8"/><path d="M5 10.5h7M5 13.5h7" stroke="#2563eb" stroke-width="1.6" stroke-linecap="round"/><path d="M19 9l4 3-4 3M16 12h7" fill="none" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div><div class="t">TSN 交换机</div><div class="d">802.1Qbv 门控 · 多端口</div></div>
+      </div>
+      <div class="pal-item" draggable="true" data-type="device">
+        <svg width="30" height="24" viewBox="0 0 30 24"><rect x="3" y="3" width="24" height="14" rx="2.5" fill="#eff6ff" stroke="#2563eb" stroke-width="1.8"/><path d="M15 17v4M10 21h10" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <div><div class="t">端设备 / 网卡</div><div class="d">流量发送方 / 接收方</div></div>
+      </div>
+    </div>
+    <div class="pal-hint">拖拽组件到画布建立拓扑；使用顶部工具切换「连线」模式，点击两个节点创建链路。</div>
+    <div class="props" id="propsPanel"></div>
+  </aside>
+
+  <!-- Center -->
+  <div class="canvas-wrap" id="canvasWrap">
+    <svg id="canvas"></svg>
+    <div class="canvas-toolbar">
+      <div class="seg" id="modeSeg">
+        <button data-mode="select" class="on" title="选择/移动（V）"><svg width="15" height="15" viewBox="0 0 16 16"><path d="M3 2l10 6-4.2 1.2L11 14 8.6 12l-1 2z" fill="currentColor"/></svg></button>
+        <button data-mode="link" title="连线（L）"><svg width="15" height="15" viewBox="0 0 16 16"><path d="M2 14c6 0 8-2 8-8m0 0h-3m3 0v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+        <button data-mode="delete" title="删除（D）"><svg width="15" height="15" viewBox="0 0 16 16"><path d="M3 4h10M6 4V2.5h4V4M5 4l.7 9.5h4.6L11 4M7 6.5v5M9 6.5v5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      </div>
+      <div class="zoomctl"><button id="zoomOut">−</button><span id="zoomPct">100%</span><button id="zoomIn">+</button><button id="zoomFit" title="适应画布">⛶</button></div>
+    </div>
+    <div class="canvas-hint" id="canvasHint"><div>
+      <b>从左侧拖入组件</b>，搭建 TSN 网络<br>
+      切换「连线」模式点击两节点创建链路 → 右侧配置流量<br>
+      点击顶部 <b>⚡生成调度</b> 计算 GCL 并仿真端到端延迟
+    </div></div>
+    <div class="mode-tip" id="modeTip"></div>
+  </div>
+
+  <!-- Right -->
+  <aside class="right">
+    <div class="tabs">
+      <button class="on" data-tab="flows">流量配置</button>
+      <button data-tab="sched">调度结果</button>
+    </div>
+    <div class="tab-body" id="tab-flows">
+      <div class="add-flow-bar"><button class="btn sm" id="btnAddFlow" style="width:100%">＋ 新建流量（Flow）</button></div>
+      <div id="flowList"></div>
+    </div>
+    <div class="tab-body hidden" id="tab-sched"></div>
+  </aside>
+</main>
+
+<footer class="status">
+  <span class="dot" id="stDot" style="background:#94a3b8"></span>
+  <span id="stMsg">就绪</span>
+  <span class="right" id="stInfo"></span>
+</footer>
+
+<div id="toasts"></div>
+
+<!-- Flow modal -->
+<div class="overlay" id="flowModal">
+  <div class="modal">
+    <header><b id="flowModalTitle">新建流量</b><button class="x" data-close>✕</button></header>
+    <div class="body">
+      <div class="fgrid">
+        <div class="field"><label>名称</label><input id="fName" type="text" placeholder="flow1"></div>
+        <div class="field"><label>优先级（0 最高）</label><select id="fPrio"></select></div>
+        <div class="field"><label>源设备（发送方）</label><select id="fSrc"></select></div>
+        <div class="field"><label>目的设备（接收方）</label><select id="fDst"></select></div>
+        <div class="field"><label>报文大小（字节）</label><input id="fSize" type="number" min="1" value="1500"></div>
+        <div class="field"><label>发送周期（µs）</label><input id="fPeriod" type="number" min="1" value="1000"></div>
+        <div class="field"><label>首发偏移 firstT1（µs）</label><input id="fT1" type="number" min="0" value="0"></div>
+        <div class="field"><label>最大端到端延迟（µs）</label><input id="fHc" type="number" min="1" value="1000"></div>
+        <div class="route-preview" id="fRoute">选择源/目的设备后显示路由</div>
+      </div>
+    </div>
+    <footer><button class="btn" data-close>取消</button><button class="btn primary" id="fSave">保存</button></footer>
+  </div>
+</div>
+
+<!-- Help modal -->
+<div class="overlay" id="helpModal">
+  <div class="modal" style="width:640px">
+    <header><b>使用帮助</b><button class="x" data-close>✕</button></header>
+    <div class="body help">
+      <h5>快速上手</h5>
+      <ol>
+        <li>从左侧<b>拖拽</b>「TSN 交换机」和「端设备」到画布；</li>
+        <li>切换到<b>连线模式</b>（工具栏第 2 个按钮），依次点击两个节点创建链路（端设备只能连接交换机）；</li>
+        <li>选中节点可在左下角<b>属性面板</b>编辑参数（端口速率、保护带、报文大小、周期等）；</li>
+        <li>右侧「流量配置」新建 Flow（源 → 目的、周期、优先级、延迟约束）；</li>
+        <li>点击 <b>⚡ 生成调度</b>：自动计算路由、时隙分配（GCL）、端到端延迟与抖动；</li>
+        <li>「导出」生成 TSNsched JSON（交 Z3 后端精确求解）或 NetConf XML（下发交换机）。</li>
+      </ol>
+      <h5>单位约定</h5>
+      <p>时间单位为微秒（µs）；端口速率单位为字节/微秒，<code>125</code> 即 1 Gbps（<code>125 B/µs × 8 = 1000 Mbps</code>）。报文大小单位为字节。</p>
+      <h5>调度引擎说明</h5>
+      <p>本界面内置<b>简化贪心调度器</b>（按优先级 + 截止期排序，逐端口最早可用时隙分配，含保护带），用于快速验证拓扑可行性与延迟量级。<b>严格最优求解</b>请导出 TSNsched JSON，使用本仓库 Z3 后端：<code>cd Script && ./generateSchedule.sh input.json</code>。</p>
+      <h5>后端兼容性注意</h5>
+      <p>① 同一源设备发出<b>多条流</b>时，Z3 后端中它们共享同一发送流，可能造成约束不可满足（本界面贪心调度不受影响）；建议每个发送端只规划一条流，或适当放大周期。② 后端流参数（周期/报文大小/约束）取自<b>设备默认值</b>，Flow 级别的修改仅作用于本界面仿真。</p>
+      <h5>NetConf XML 说明</h5>
+      <p>导出的 XML 遵循仓库 <code>XMLExporter</code> 的 TrustNode YANG 结构（<code>urn:sysrepo:TrustNode:TNsysrepo</code>）。GCL 覆盖整个超周期（hyperperiod），门状态为二进制编码（<code>2^队列号</code>）。对接其他厂商需按其 YANG 模型适配。单位：µs。</p>
+      <h5>快捷键</h5>
+      <p><code>V</code> 选择 · <code>L</code> 连线 · <code>D</code> 删除 · <code>Delete</code> 删除选中项 · <code>Esc</code> 取消</p>
+    </div>
+    <footer><button class="btn primary" data-close>知道了</button></footer>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ================= State ================= */
+const state = {
+  nodes: [], links: [], flows: [],
+  settings: { cycle: 500, defProp: 1 },
+  seq: { sw: 0, dev: 0, flow: 0 },
+  sel: null,            // {kind:'node'|'link', id}
+  mode: 'select',
+  linkSrc: null,
+  view: { x: 60, y: 40, k: 1 },
+  schedule: null,
+};
+const FLOW_COLORS = ['#2563eb','#ea580c','#16a34a','#9333ea','#dc2626','#0891b2','#65a30d','#c026d3'];
+const $ = s => document.querySelector(s);
+const byId = id => state.nodes.find(n => n.id === id);
+const fmt = (x, d = 1) => Number(x).toFixed(d);
+
+function toast(msg, type = '') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type; t.textContent = msg;
+  $('#toasts').appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+function setStatus(msg) { $('#stMsg').textContent = msg; }
+let saveTimer = null;
+function markDirty() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem('tsn-studio', JSON.stringify(serializeProject())); 
+      $('#stDot').style.background = '#16a34a';
+      $('#stInfo').textContent = `节点 ${state.nodes.length} · 链路 ${state.links.length} · 流 ${state.flows.length}`;
+    } catch (e) {}
+  }, 400);
+}
+
+/* ================= Serialization ================= */
+function serializeProject() {
+  return {
+    version: 1, settings: state.settings, seq: state.seq,
+    nodes: state.nodes, links: state.links, flows: state.flows,
+  };
+}
+function loadProject(p) {
+  if (!p || !p.nodes) return;
+  state.nodes = p.nodes; state.links = p.links || []; state.flows = p.flows || [];
+  state.settings = p.settings || state.settings; state.seq = p.seq || state.seq;
+  state.sel = null; state.linkSrc = null; state.schedule = null;
+  fitView(); renderAll();
+}
+
+/* ================= Names / defaults ================= */
+function nextName(type) {
+  if (type === 'switch') return 'SW' + (++state.seq.sw);
+  return 'dev' + (++state.seq.dev);
+}
+function addNode(type, x, y) {
+  const n = type === 'switch'
+    ? { id: 'n' + Math.random().toString(36).slice(2, 9), type, name: nextName(type), x, y, portSpeed: 125, gb: 10 }
+    : { id: 'n' + Math.random().toString(36).slice(2, 9), type, name: nextName(type), x, y,
+        packetSize: 1500, period: 1000, firstT1: 0, hardConstraint: 1000 };
+  state.nodes.push(n); markDirty(); return n;
+}
+function linkBetween(aId, bId) {
+  return state.links.find(l => (l.a === aId && l.b === bId) || (l.a === bId && l.b === aId));
+}
+function canConnect(aId, bId) {
+  if (aId === bId) return '不能连接到自身';
+  const a = byId(aId), b = byId(bId);
+  if (!a || !b) return '节点不存在';
+  if (a.type === 'device' && b.type === 'device') return '端设备之间不能直连，需经过交换机';
+  if (linkBetween(aId, bId)) return '这两个节点之间已存在链路';
+  for (const n of [a, b]) if (n.type === 'device' && state.links.some(l => l.a === n.id || l.b === n.id))
+    return `端设备 ${n.name} 已有链路（端点单归）`;
+  return null;
+}
+function addLink(aId, bId) {
+  const err = canConnect(aId, bId);
+  if (err) { toast(err, 'err'); return null; }
+  const l = { id: 'l' + Math.random().toString(36).slice(2, 9), a: aId, b: bId, prop: state.settings.defProp };
+  state.links.push(l); markDirty(); return l;
+}
+function deleteNode(id) {
+  const n = byId(id); if (!n) return;
+  const flowNames = state.flows.filter(f => f.src === id || f.dst === id).map(f => f.name);
+  state.links = state.links.filter(l => l.a !== id && l.b !== id);
+  state.flows = state.flows.filter(f => f.src !== id && f.dst !== id);
+  state.nodes = state.nodes.filter(n => n.id !== id);
+  if (flowNames.length) toast(`已删除 ${n.name} 及关联流量：${flowNames.join('、')}`);
+  else toast(`已删除 ${n.name}`);
+  state.schedule = null; state.sel = null; markDirty(); renderAll();
+}
+function deleteLink(id) {
+  state.links = state.links.filter(l => l.id !== id);
+  toast('已删除链路'); state.schedule = null; state.sel = null; markDirty(); renderAll();
+}
+
+/* ================= Routing (BFS) ================= */
+function bfsRoute(srcId, dstId) {
+  if (srcId === dstId || !byId(srcId) || !byId(dstId)) return null;
+  const adj = {};
+  state.links.forEach(l => { (adj[l.a] = adj[l.a] || []).push(l.b); (adj[l.b] = adj[l.b] || []).push(l.a); });
+  const prev = { [srcId]: null }; const q = [srcId];
+  while (q.length) {
+    const u = q.shift();
+    if (u === dstId) break;
+    (adj[u] || []).forEach(v => { if (!(v in prev)) { prev[v] = u; q.push(v); } });
+  }
+  if (!(dstId in prev)) return null;
+  const path = []; let c = dstId;
+  while (c) { path.unshift(c); c = prev[c]; }
+  return path;
+}
+function routeString(route) { return route.map(id => byId(id).name).join(' → '); }
+
+/* ================= Scheduler (simplified greedy) ================= */
+const gcd = (a, b) => b ? gcd(b, a % b) : a;
+const lcm = (a, b) => a / gcd(a, b) * b;
+
+function findSlot(busy, from, dur, HP) {
+  const cands = [from];
+  busy.forEach(e => { if (e.te > from) cands.push(e.te); });
+  cands.sort((a, b) => a - b);
+  for (const s of cands) {
+    if (s + dur > HP) return -1;
+    let clash = false;
+    for (const e of busy) { if (s < e.te && e.gs < s + dur) { clash = true; break; } }
+    if (!clash) return s;
+  }
+  return -1;
+}
+
+function generateSchedule() {
+  const switches = state.nodes.filter(n => n.type === 'switch');
+  if (!switches.length) return toast('请先添加至少一台 TSN 交换机', 'err');
+  if (!state.flows.length) return toast('请先配置至少一条流量', 'err');
+  const T = Math.max(1, Math.round(state.settings.cycle));
+
+  // routes
+  for (const f of state.flows) {
+    f._route = bfsRoute(f.src, f.dst);
+    if (!f._route) return toast(`流量 ${f.name} 无可达路径，请检查拓扑连线`, 'err');
+    if (f._route.length < 3) return toast(`流量 ${f.name} 路径无效`, 'err');
+  }
+  // hyperperiod
+  let HP = T;
+  state.flows.forEach(f => { HP = lcm(HP, Math.max(1, Math.round(f.period))); });
+  if (HP > 200000) return toast(`超周期过大（${HP}µs > 200000µs），请调整周期`, 'err');
+
+  // per-port busy list: key swId>nbId -> [{gs,ts,te,fid}]
+  const busy = new Map();
+  const pkey = (swId, nbId) => swId + '>' + nbId;
+  const failed = new Set();
+  const results = [];
+  const sorted = [...state.flows].sort((a, b) => a.priority - b.priority || a.maxLatency - b.maxLatency || a.id < b.id ? -1 : 1);
+
+  for (const f of sorted) {
+    const route = f._route;
+    const firstSw = byId(route[1]);
+    const txFirst = f.packetSize / firstSw.portSpeed;
+    const nInst = HP / Math.max(1, Math.round(f.period));
+    const lats = [], traces = [];
+    let ok = true;
+    outer:
+    for (let i = 0; i < nInst; i++) {
+      const t0 = i * f.period + f.firstT1;
+      let dep = t0 + txFirst;   // last bit leaves source NIC
+      const trace = [];
+      for (let h = 1; h < route.length - 1; h++) {
+        const sw = byId(route[h]);           // egress switch
+        const next = byId(route[h + 1]);
+        const tx = f.packetSize / sw.portSpeed;
+        const gb = sw.gb;
+        const prop = (linkBetween(route[h - 1], sw.id) || {}).prop ?? state.settings.defProp;
+        const arrival = dep + prop;          // last bit arrives at sw
+        const key = pkey(sw.id, next.id);
+        if (!busy.has(key)) busy.set(key, []);
+        const arr = busy.get(key);
+        const s = findSlot(arr, arrival, tx, HP);
+        if (s < 0) { ok = false; break outer; }
+        arr.push({ gs: Math.max(0, s - gb), ts: s, te: s + tx, fid: f.id });
+        dep = s + tx;                         // last bit leaves egress port
+        trace.push({ sw: sw.name, to: next.name, arrival, start: s, tx, dep });
+      }
+      const propLast = (linkBetween(route[route.length - 2], route[route.length - 1]) || {}).prop ?? state.settings.defProp;
+      lats.push(dep + propLast - t0);
+      traces.push(trace);
+    }
+    results.push({ flow: f, lats, traces, route, failed: !ok });
+    if (!ok) failed.add(f.id);
+  }
+  // purge failed flows' allocations
+  busy.forEach(arr => { for (let i = arr.length - 1; i >= 0; i--) if (failed.has(arr[i].fid)) arr.splice(i, 1); });
+
+  // build per-port schedule
+  const ports = [];
+  for (const sw of switches) {
+    const swLinks = state.links.filter(l => l.a === sw.id || l.b === sw.id);
+    swLinks.forEach((l, idx) => {
+      const nbId = l.a === sw.id ? l.b : l.a;
+      const nb = byId(nbId);
+      const key = pkey(sw.id, nbId);
+      const slots = (busy.get(key) || []).slice().sort((a, b) => a.ts - b.ts);
+      ports.push({ sw, nb, portNum: idx, key, slots, util: slots.reduce((s, e) => s + (e.te - e.gs), 0) / HP });
+    });
+  }
+
+  // stats
+  let worst = 0, viol = 0;
+  results.forEach(r => {
+    if (r.failed) { viol++; return; }
+    const mx = Math.max(...r.lats), mn = Math.min(...r.lats);
+    r.maxLat = mx; r.minLat = mn; r.jitter = mx - mn;
+    if (mx > r.flow.maxLatency) viol++;
+    if (mx > worst) worst = mx;
+  });
+
+  state.schedule = { T, HP, ports, results, viol, worst, failed };
+  // GCL per port
+  state.schedule.ports.forEach(p => p.gcl = buildGcl(p, HP));
+  return true;
+}
+
+function buildGcl(port, HP) {
+  const entries = [];
+  let prevEnd = 0, id = 0;
+  const push = (dur, gates, gb) => { if (dur > 0.01) entries.push({ id: id++, dur, gates, gb: !!gb }); };
+  for (const s of port.slots) {
+    const be = s.ts - (port.sw.gb) - prevEnd;   // best-effort gap before this slot
+    if (be > 0) { push(Math.max(0, be), 1, false); push(port.sw.gb, 0, true); }
+    push(s.te - s.ts, Math.pow(2, port.slots.length ? prioOf(s.fid) : 0), false);
+    prevEnd = s.te;
+  }
+  const tail = HP - prevEnd;
+  if (tail > 0) push(tail, 1, false);
+  return entries;
+}
+function prioOf(fid) { const f = state.flows.find(x => x.id === fid); return f ? f.priority : 0; }
+function flowColor(fid) { const i = state.flows.findIndex(x => x.id === fid); return FLOW_COLORS[(i < 0 ? 0 : i) % FLOW_COLORS.length]; }
+
+/* ================= Exports ================= */
+function download(name, content, mime) {
+  const blob = new Blob([content], { type: mime || 'application/octet-stream' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 400);
+}
+
+function exportTsnJson() {
+  const switches = state.nodes.filter(n => n.type === 'switch');
+  const devices = state.nodes.filter(n => n.type === 'device');
+  if (!switches.length || !devices.length) return toast('拓扑不完整（需要交换机与端设备）', 'err');
+  const T = state.settings.cycle;
+  const out = {
+    switches: switches.map(sw => ({
+      name: sw.name,
+      scheduleType: 'hypercycle',
+      defaultTimeToTravel: state.settings.defProp,
+      defaultPortSpeed: sw.portSpeed,
+      defaultGuardBandSize: sw.gb,
+      ports: state.links.filter(l => l.a === sw.id || l.b === sw.id).map((l, i) => {
+        const nb = byId(l.a === sw.id ? l.b : l.a);
+        return {
+          name: 'eth' + i, connectsTo: nb.name,
+          timeToTravel: l.prop, portSpeed: sw.portSpeed, guardBandSize: sw.gb,
+          scheduleType: 'microcycle', maximumSlotDuration: T, cycleStart: 0,
+        };
+      }),
+    })),
+    devices: devices.map(d => ({
+      name: d.name,
+      defaultFirstSendingTime: d.firstT1,
+      defaultPacketPeriodicity: d.period,
+      defaultHardConstraintTime: d.hardConstraint,
+      defaultPacketSize: d.packetSize,
+    })),
+    flows: state.flows.map(f => ({
+      name: f.name, type: 'unicast',
+      sourceDevice: byId(f.src).name,
+      endDevices: [byId(f.dst).name],
+      hops: f._route ? f._route.slice(0, -1).map((id, i) => ({ currentNodeName: byId(id).name, nextNodeName: byId(f._route[i + 1]).name })) : [],
+    })),
+  };
+  // refresh routes
+  out.flows.forEach((f, i) => {
+    const fl = state.flows[i]; const r = bfsRoute(fl.src, fl.dst) || [];
+    f.hops = r.slice(0, -1).map((id, j) => ({ currentNodeName: byId(id).name, nextNodeName: byId(r[j + 1]).name }));
+  });
+  download('tsn-input.json', JSON.stringify(out, null, 2), 'application/json');
+  toast('已导出 TSNsched 输入 JSON（可交 Z3 后端精确求解）', 'ok');
+}
+
+function exportNetconfXml() {
+  if (!state.schedule) return toast('请先生成调度', 'err');
+  const { ports, HP } = state.schedule;
+  const used = ports.filter(p => p.slots.length);
+  if (!used.length) return toast('没有可导出的调度时隙', 'err');
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  xml += '<nc:config xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">\n';
+  xml += `<!-- Created with TSN Studio (TSNsched Web GUI). GCL spans hyperperiod ${HP}us. Time units: microseconds. -->\n`;
+  xml += '<!-- 部署提示：实际下发时请按交换机拆分为单交换机文件 -->\n';
+  for (const p of used) {
+    xml += `  <!-- ======== Schedule for ${p.sw.name} · port eth${p.portNum} (${p.sw.name} -> ${p.nb.name}) ======== -->\n`;
+    xml += '  <TNtas xmlns="urn:sysrepo:TrustNode:TNsysrepo">\n    <ports>\n';
+    xml += `      <id>${p.portNum}</id>\n      <!-- Cycle duration: ${HP} -->\n`;
+    for (const e of p.gcl) {
+      const c = e.gb ? '<!-- Guard Band -->' : '';
+      xml += `      <GCL>${c}<id>${e.id}</id><timeperiod>${Math.max(0, Math.round(e.dur))}</timeperiod><gatestates>${e.gates}</gatestates></GCL>\n`;
+    }
+    xml += '      <admin_base_time>0</admin_base_time>\n      <admin_cycle_time_ext>0</admin_cycle_time_ext>\n      <gate_enable>true</gate_enable>\n    </ports>\n  </TNtas>\n';
+  }
+  xml += '</nc:config>\n';
+  download('tsn-netconf-gcl.xml', xml, 'application/xml');
+  toast('已导出 NetConf 门控列表 XML', 'ok');
+}
+
+function exportResultsJson() {
+  if (!state.schedule) return toast('请先生成调度', 'err');
+  const s = state.schedule;
+  const out = {
+    cycleDuration: s.T, hyperperiod: s.HP,
+    ports: s.ports.filter(p => p.slots.length).map(p => ({
+      switch: p.sw.name, port: 'eth' + p.portNum, connectsTo: p.nb.name,
+      utilization: +fmt(p.util * 100, 2),
+      gcl: p.gcl.map(e => ({ id: e.id, timeperiod: +fmt(e.dur, 2), gatestates: e.gates, guardBand: e.gb })),
+    })),
+    flows: s.results.map(r => ({
+      name: r.flow.name, priority: r.flow.priority, route: routeString(r.route),
+      packetsSimulated: r.failed ? 0 : r.lats.length,
+      latencyMin: r.minLat !== undefined ? +fmt(r.minLat) : null,
+      latencyMax: r.maxLat !== undefined ? +fmt(r.maxLat) : null,
+      jitter: r.jitter !== undefined ? +fmt(r.jitter) : null,
+      maxLatencyConstraint: r.flow.maxLatency,
+      status: r.failed ? 'UNSCHEDULABLE' : (r.maxLat > r.flow.maxLatency ? 'VIOLATION' : 'OK'),
+    })),
+  };
+  download('tsn-schedule-results.json', JSON.stringify(out, null, 2), 'application/json');
+  toast('已导出调度结果 JSON', 'ok');
+}
+
+/* ================= Canvas rendering ================= */
+const NS = 'http://www.w3.org/2000/svg';
+const svg = $('#canvas');
+const gLinks = document.createElementNS(NS, 'g');
+const gNodes = document.createElementNS(NS, 'g');
+function svgEl(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function nodeW(n) { return n.type === 'switch' ? 118 : 104; }
+function nodeH(n) { return n.type === 'switch' ? 54 : 48; }
+
+function renderCanvas() {
+  const wrap = $('#canvasWrap');
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.innerHTML = '';
+  // defs
+  const defs = svgEl('defs', {});
+  svg.appendChild(defs);
+  const pat = svgEl('pattern', { id: 'grid', width: 26, height: 26, patternUnits: 'userSpaceOnUse' }, defs);
+  svgEl('rect', { width: 26, height: 26, fill: 'none' }, pat);
+  svgEl('path', { d: 'M26 0H0V26', fill: 'none', stroke: '#e2e8f0', 'stroke-width': 1 }, pat);
+  const marker = svgEl('marker', { id: 'arrow', viewBox: '0 0 8 8', refX: 7, refY: 4, markerWidth: 7, markerHeight: 7, orient: 'auto' }, defs);
+  svgEl('path', { d: 'M1 1L7 4L1 7Z', fill: '#94a3b8' }, marker);
+  const markerSel = svgEl('marker', { id: 'arrowSel', viewBox: '0 0 8 8', refX: 7, refY: 4, markerWidth: 7, markerHeight: 7, orient: 'auto' }, defs);
+  svgEl('path', { d: 'M1 1L7 4L1 7Z', fill: '#2563eb' }, markerSel);
+  svgEl('rect', { width: w, height: h, fill: 'url(#grid)' }, svg);
+
+  const gView = svgEl('g', { transform: `translate(${state.view.x},${state.view.y}) scale(${state.view.k})` }, svg);
+  gLinks.id = 'gLinks'; gNodes.id = 'gNodes';
+  gView.appendChild(gLinks); gView.appendChild(gNodes);
+  state.links.forEach(renderLink);
+  state.nodes.forEach(renderNode);
+  $('#canvasHint').style.display = state.nodes.length ? 'none' : 'flex';
+}
+
+function anchorPoint(node, toward) {
+  const cx = node.x + nodeW(node) / 2, cy = node.y + nodeH(node) / 2;
+  const hw = nodeW(node) / 2 + 3, hh = nodeH(node) / 2 + 3;
+  const dx = toward.x - cx, dy = toward.y - cy;
+  const sx = dx === 0 ? Infinity : Math.abs(hw / dx), sy = dy === 0 ? Infinity : Math.abs(hh / dy);
+  const s = Math.min(sx, sy);
+  return { x: cx + dx * s, y: cy + dy * s };
+}
+
+function renderLink(l) {
+  const a = byId(l.a), b = byId(l.b); if (!a || !b) return;
+  const ac = { x: a.x + nodeW(a) / 2, y: a.y + nodeH(a) / 2 };
+  const bc = { x: b.x + nodeW(b) / 2, y: b.y + nodeH(b) / 2 };
+  const p1 = anchorPoint(a, bc), p2 = anchorPoint(b, ac);
+  const g = svgEl('g', { class: 'link' + (state.sel && state.sel.kind === 'link' && state.sel.id === l.id ? ' selected' : '') });
+  g.dataset.id = l.id;
+  svgEl('line', { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y, class: 'vis', 'marker-end': state.sel && state.sel.kind === 'link' && state.sel.id === l.id ? 'url(#arrowSel)' : 'url(#arrow)' }, g);
+  svgEl('line', { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y, class: 'hit' }, g);
+  if (state.sel && state.sel.kind === 'link' && state.sel.id === l.id) {
+    const t = svgEl('text', { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 - 6, 'text-anchor': 'middle' }, g);
+    t.textContent = 'prop ' + l.prop + 'µs';
+  }
+  gLinks.appendChild(g);
+}
+
+function renderNode(n) {
+  const g = svgEl('g', { class: 'node' + (state.sel && state.sel.kind === 'node' && state.sel.id === n.id ? ' selected' : '') + (state.linkSrc === n.id ? ' linksrc' : '') });
+  g.dataset.id = n.id; g.dataset.type = n.type;
+  g.setAttribute('transform', `translate(${n.x},${n.y})`);
+  if (n.type === 'switch') {
+    svgEl('rect', { class: 'box', width: nodeW(n), height: nodeH(n), rx: 9, fill: '#fff', stroke: '#1e293b', 'stroke-width': 2 }, g);
+    svgEl('rect', { x: 9, y: 9, width: 26, height: 15, rx: 3, fill: '#eff6ff', stroke: '#2563eb', 'stroke-width': 1.2 }, g);
+    svgEl('path', { d: 'M12 13.5h9M12 16.5h9M25 12l4 3-4 3', fill: 'none', stroke: '#2563eb', 'stroke-width': 1.1, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    svgEl('path', { d: 'M23 12l4 3-4 3', fill: 'none', stroke: '#16a34a', 'stroke-width': 1.1, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    const ports = state.links.filter(l => l.a === n.id || l.b === n.id).length;
+    const nameT = svgEl('text', { x: 42, y: 22, 'font-size': 14, 'font-weight': 600, fill: '#0f172a' }, g);
+    nameT.textContent = n.name;
+    const subT = svgEl('text', { x: 42, y: 39, 'font-size': 10.5, fill: '#64748b' }, g);
+    subT.textContent = `TSN 交换机 · ${ports} 端口 · ${n.portSpeed}B/µs`;
+  } else {
+    svgEl('rect', { class: 'box', width: nodeW(n), height: nodeH(n), rx: 14, fill: '#eff6ff', stroke: '#2563eb', 'stroke-width': 1.8 }, g);
+    svgEl('rect', { x: 9, y: 10, width: 22, height: 14, rx: 2.5, fill: '#fff', stroke: '#2563eb', 'stroke-width': 1.2 }, g);
+    svgEl('path', { d: 'M20 24v6M14 30h12', stroke: '#2563eb', 'stroke-width': 1.2, 'stroke-linecap': 'round' }, g);
+    const nameT = svgEl('text', { x: 38, y: 21, 'font-size': 13, 'font-weight': 600, fill: '#1e3a8a' }, g);
+    nameT.textContent = n.name;
+    const subT = svgEl('text', { x: 38, y: 36, 'font-size': 10, fill: '#64748b' }, g);
+    subT.textContent = `${n.packetSize}B · ${n.period}µs`;
+  }
+  gNodes.appendChild(g);
+}
+
+function renderAll() { renderCanvas(); renderProps(); renderFlowList(); renderScheduleTab(); }
+
+/* ================= Properties panel ================= */
+function renderProps() {
+  const el = $('#propsPanel');
+  if (!state.sel) {
+    el.innerHTML = `<h4>全局设置</h4>
+      <div class="field"><label>周期时长 Cycle（µs）</label><input type="number" min="1" id="gCycle" value="${state.settings.cycle}"><div class="hint">所有交换机统一周期（门控循环）</div></div>
+      <div class="field"><label>默认链路传播时延（µs）</label><input type="number" min="0" step="0.5" id="gProp" value="${state.settings.defProp}"></div>
+      <div class="empty">选中节点或链路可编辑属性。<br><br>端口速率 125 B/µs = 1 Gbps。</div>`;
+    $('#gCycle').onchange = e => { state.settings.cycle = Math.max(1, +e.target.value || 500); markDirty(); };
+    $('#gProp').onchange = e => { state.settings.defProp = Math.max(0, +e.target.value || 1); markDirty(); };
+    return;
+  }
+  if (state.sel.kind === 'node') {
+    const n = byId(state.sel.id); if (!n) { state.sel = null; return renderProps(); }
+    if (n.type === 'switch') {
+      el.innerHTML = `<h4>交换机 · ${n.name}</h4>
+        <div class="field"><label>名称</label><input id="pName" value="${n.name}"></div>
+        <div class="field"><label>端口速率（字节/µs）</label><input type="number" min="1" id="pSpeed" value="${n.portSpeed}"><div class="hint">125 = 1 Gbps · 12.5 = 100 Mbps</div></div>
+        <div class="field"><label>保护带 Guard Band（µs）</label><input type="number" min="0" id="pGb" value="${n.gb}"></div>
+        <div class="field"><label>端口数</label><input value="${state.links.filter(l => l.a === n.id || l.b === n.id).length}" disabled></div>`;
+      bindNodeProps(n);
+    } else {
+      el.innerHTML = `<h4>端设备 · ${n.name}</h4>
+        <div class="field"><label>名称</label><input id="pName" value="${n.name}"></div>
+        <div class="field"><label>默认报文大小（字节）</label><input type="number" min="1" id="pSize" value="${n.packetSize}"></div>
+        <div class="field"><label>默认发送周期（µs）</label><input type="number" min="1" id="pPeriod" value="${n.period}"></div>
+        <div class="field"><label>首发时间 firstT1（µs）</label><input type="number" min="0" id="pT1" value="${n.firstT1}"></div>
+        <div class="field"><label>最大容忍延迟（µs）</label><input type="number" min="1" id="pHc" value="${n.hardConstraint}"></div>`;
+      bindNodeProps(n);
+    }
+  } else if (state.sel.kind === 'link') {
+    const l = state.links.find(x => x.id === state.sel.id);
+    if (!l) { state.sel = null; return renderProps(); }
+    const a = byId(l.a), b = byId(l.b);
+    el.innerHTML = `<h4>链路</h4>
+      <div class="field"><label>连接</label><input value="${a.name} ⟷ ${b.name}" disabled></div>
+      <div class="field"><label>传播时延（µs）</label><input type="number" min="0" step="0.5" id="lProp" value="${l.prop}"></div>`;
+    $('#lProp').onchange = e => { l.prop = Math.max(0, +e.target.value || 0); markDirty(); renderCanvas(); };
+  }
+}
+function bindNodeProps(n) {
+  $('#pName').onchange = e => {
+    let v = e.target.value.trim() || n.name;
+    if (state.nodes.some(x => x !== n && x.name === v)) { v = v + '_'; toast('名称冲突，已自动加后缀'); }
+    n.name = v; markDirty(); renderAll();
+  };
+  const bind = (id, key, min) => {
+    const el2 = $('#' + id); if (!el2) return;
+    el2.onchange = e => { n[key] = Math.max(min, +e.target.value || min); markDirty(); renderCanvas(); };
+  };
+  if (n.type === 'switch') { bind('pSpeed', 'portSpeed', 1); bind('pGb', 'gb', 0); }
+  else { bind('pSize', 'packetSize', 1); bind('pPeriod', 'period', 1); bind('pT1', 'firstT1', 0); bind('pHc', 'hardConstraint', 1); }
+}
+
+/* ================= Flow list & modal ================= */
+let editingFlow = null;
+function renderFlowList() {
+  const el = $('#flowList');
+  if (!state.flows.length) {
+    el.innerHTML = '<div class="empty-state"><div class="big">尚未配置流量</div>点击上方按钮创建第一条 TSN 流量</div>';
+    return;
+  }
+  el.innerHTML = '';
+  state.flows.forEach((f, i) => {
+    const route = bfsRoute(f.src, f.dst);
+    const color = FLOW_COLORS[i % FLOW_COLORS.length];
+    const card = document.createElement('div');
+    card.className = 'flow-card';
+    card.innerHTML = `
+      <div class="flow-head">
+        <span class="flow-dot" style="background:${color}"></span><b>${f.name}</b>
+        <span class="route" title="${route ? routeString(route) : '无可达路径'}">${route ? routeString(route) : '✗ 不可达'}</span>
+        <div class="ops">
+          <button class="icon-btn" data-edit="${f.id}" title="编辑">✎</button>
+          <button class="icon-btn danger" data-del="${f.id}" title="删除">✕</button>
+        </div>
+      </div>
+      <div class="flow-meta">
+        <span class="chip prio">prio ${f.priority}</span>
+        <span class="chip">${f.packetSize} B</span>
+        <span class="chip">${f.period} µs</span>
+        <span class="chip">≤ ${f.maxLatency} µs</span>
+      </div>
+      ${route ? '' : '<div class="flow-bad">⚠ 源与目的之间无可达路径</div>'}`;
+    el.appendChild(card);
+  });
+  el.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    state.flows = state.flows.filter(f => f.id !== b.dataset.del);
+    state.schedule = null; markDirty(); renderAll(); toast('已删除流量');
+  });
+  el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => openFlowModal(b.dataset.edit));
+}
+
+function openFlowModal(flowId) {
+  editingFlow = flowId ? state.flows.find(f => f.id === flowId) : null;
+  const devices = state.nodes.filter(n => n.type === 'device');
+  if (devices.length < 2) return toast('需要至少两个端设备才能创建流量', 'err');
+  $('#flowModalTitle').textContent = editingFlow ? '编辑流量' : '新建流量';
+  const f = editingFlow || { name: 'flow' + (state.seq.flow + 1), priority: 0, src: devices[0].id, dst: devices[1].id, packetSize: devices[0].packetSize, period: devices[0].period, firstT1: 0, maxLatency: 1000 };
+  const opts = sel => devices.map(d => `<option value="${d.id}" ${d.id === sel ? 'selected' : ''}>${d.name}</option>`).join('');
+  $('#fPrio').innerHTML = Array.from({ length: 8 }, (_, i) => `<option value="${i}" ${i === f.priority ? 'selected' : ''}>${i}</option>`).join('');
+  $('#fSrc').innerHTML = opts(f.src); $('#fDst').innerHTML = opts(f.dst);
+  $('#fName').value = f.name; $('#fSize').value = f.packetSize; $('#fPeriod').value = f.period;
+  $('#fT1').value = f.firstT1; $('#fHc').value = f.maxLatency;
+  updateRoutePreview();
+  $('#flowModal').classList.add('open');
+}
+function updateRoutePreview() {
+  const src = $('#fSrc').value, dst = $('#fDst').value;
+  const rp = $('#fRoute');
+  if (src === dst) { rp.textContent = '✗ 源与目的不能相同'; rp.className = 'route-preview bad'; return; }
+  const r = bfsRoute(src, dst);
+  if (!r) { rp.textContent = '✗ 无可达路径（请检查拓扑连线）'; rp.className = 'route-preview bad'; return; }
+  rp.textContent = '路由：' + routeString(r); rp.className = 'route-preview ok';
+}
+$('#fSrc').onchange = updateRoutePreview; $('#fDst').onchange = updateRoutePreview;
+$('#fSave').onclick = () => {
+  const src = $('#fSrc').value, dst = $('#fDst').value;
+  if (src === dst) return toast('源与目的不能相同', 'err');
+  if (!bfsRoute(src, dst)) return toast('无可达路径', 'err');
+  const data = {
+    name: $('#fName').value.trim() || 'flow', priority: +$('#fPrio').value,
+    src, dst, packetSize: Math.max(1, +$('#fSize').value || 1500),
+    period: Math.max(1, +$('#fPeriod').value || 1000),
+    firstT1: Math.max(0, +$('#fT1').value || 0),
+    maxLatency: Math.max(1, +$('#fHc').value || 1000),
+  };
+  if (state.flows.some(f => f !== editingFlow && f.name === data.name)) return toast('流量名称冲突', 'err');
+  if (editingFlow) Object.assign(editingFlow, data);
+  else { data.id = 'f' + Math.random().toString(36).slice(2, 9); state.seq.flow++; state.flows.push(data); }
+  state.schedule = null;
+  $('#flowModal').classList.remove('open');
+  markDirty(); renderAll(); toast('流量已保存', 'ok');
+};
+
+/* ================= Schedule tab ================= */
+function renderScheduleTab() {
+  const el = $('#tab-sched');
+  if (!state.schedule) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="big">尚未生成调度</div>
+      点击右上角 <b>⚡ 生成调度</b> 计算时隙分配（GCL）<br>
+      并仿真每条流的端到端延迟与抖动
+    </div>`;
+    return;
+  }
+  const s = state.schedule;
+  let html = `<div class="kpis">
+    <div class="kpi"><div class="v">${s.T}<small> µs</small></div><div class="l">周期 Cycle</div></div>
+    <div class="kpi"><div class="v">${s.HP}<small> µs</small></div><div class="l">超周期 Hyperperiod</div></div>
+    <div class="kpi ${s.viol ? 'bad' : ''}"><div class="v">${s.viol}</div><div class="l">约束违规 / 失败</div></div>
+    <div class="kpi"><div class="v">${fmt(s.worst)}<small> µs</small></div><div class="l">最差端到端延迟</div></div>
+    <div class="kpi"><div class="v">${s.ports.reduce((a, p) => a + p.slots.length, 0)}</div><div class="l">TT 时隙总数</div></div>
+    <div class="kpi"><div class="v">${fmt(Math.max(0, ...s.ports.map(p => p.util * 100)), 1)}<small> %</small></div><div class="l">最高端口 TT 利用率</div></div>
+  </div>`;
+
+  // Gantt per port
+  const usedPorts = s.ports.filter(p => p.slots.length);
+  html += '<div class="sec-title" style="padding-left:0">端口门控时序（GCL 甘特图 · 覆盖超周期 ' + s.HP + 'µs）</div>';
+  if (usedPorts.length) {
+    usedPorts.forEach(p => {
+      html += `<div class="gantt-block">
+        <h5><span class="port">${p.sw.name}:eth${p.portNum}</span> → ${p.nb.name}<span class="util">TT 利用率 ${fmt(p.util * 100, 1)}%</span></h5>
+        <div class="gantt-row">`;
+      // best-effort background
+      html += `<div class="be" style="left:0;width:100%"></div>`;
+      const nCycles = Math.round(s.HP / s.T);
+      p.slots.forEach(sl => {
+        const l = sl.ts / s.HP * 100, w = (sl.te - sl.ts) / s.HP * 100;
+        const gl = sl.gs / s.HP * 100, gw = Math.max(0, (sl.ts - sl.gs)) / s.HP * 100;
+        const fl = state.flows.find(f => f.id === sl.fid);
+        if (gw > 0) html += `<div class="gb" style="left:${gl}%;width:${gw}%" title="保护带 ${fmt(sl.ts - sl.gs)}µs"></div>`;
+        html += `<div class="slot" style="left:${l}%;width:${w}%;background:${flowColor(sl.fid)}" title="${fl ? fl.name : ''}（prio ${fl ? fl.priority : ''}）｜TT 窗口 ${fmt(sl.ts)}–${fmt(sl.te)} µs"></div>`;
+      });
+      html += `</div><div class="gantt-axis">`;
+      for (let i = 0; i <= nCycles; i++) html += `<span style="left:${i / nCycles * 100}%">${i * s.T}</span>`;
+      html += `</div></div>`;
+    });
+    html += `<div class="legend">` + state.flows.map((f, i) => `<span class="li"><span class="sw" style="background:${FLOW_COLORS[i % FLOW_COLORS.length]}"></span>${f.name}</span>`).join('') + `<span class="li"><span class="sw" style="background:#cbd5e1"></span>保护带</span><span class="li"><span class="sw" style="background:repeating-linear-gradient(45deg,#f8fafc,#f8fafc 3px,#e2e8f0 3px,#e2e8f0 6px)"></span>尽力而为</span></div>`;
+  } else html += '<div class="empty-state">没有端口承载 TT 流量</div>';
+
+  // Flow results table
+  html += '<div class="sec-title" style="padding-left:0;margin-top:10px">流端到端仿真结果</div><table class="res"><tr><th>流</th><th>路由</th><th>延迟 min~max (µs)</th><th>抖动</th><th>约束</th><th>状态</th></tr>';
+  s.results.forEach(r => {
+    const route = routeString(r.route);
+    if (r.failed) {
+      html += `<tr title="时隙分配失败：端口负载过高或超周期内无可用窗口"><td><b>${r.flow.name}</b></td><td>${route}</td><td class="mono">—</td><td class="mono">—</td><td class="mono">≤${r.flow.maxLatency}</td><td><span class="tag bad">不可调度</span></td></tr>`;
+    } else {
+      const hopTip = (r.traces[0] || []).map(h => `${h.sw}→${h.to}: 到达${fmt(h.arrival)} 窗口${fmt(h.start)}~${fmt(h.start + h.tx)}`).join('\n');
+      const bad = r.maxLat > r.flow.maxLatency;
+      html += `<tr title="${hopTip}"><td><b>${r.flow.name}</b> <span class="chip prio">p${r.flow.priority}</span></td><td>${route}</td><td class="mono">${fmt(r.minLat)} ~ ${fmt(r.maxLat)}</td><td class="mono">${fmt(r.jitter)}</td><td class="mono">≤${r.flow.maxLatency}</td><td><span class="tag ${bad ? 'bad' : 'ok'}">${bad ? '违规' : '满足'}</span></td></tr>`;
+    }
+  });
+  html += '</table>';
+  html += `<div class="note">内置调度器为<b>简化贪心算法</b>（优先级+截止期排序，最早可用时隙分配）：用于快速验证可行性与延迟量级。需要严格最优解时，请导出 TSNsched JSON 交给 Z3 后端求解，再用 NetConf XML 下发。</div>`;
+  el.innerHTML = html;
+}
+
+/* ================= Interactions ================= */
+let dragNode = null, dragOff = null, panning = null;
+
+function toWorld(ev) {
+  const r = svg.getBoundingClientRect();
+  return { x: (ev.clientX - r.left - state.view.x) / state.view.k, y: (ev.clientY - r.top - state.view.y) / state.view.k };
+}
+
+svg.addEventListener('mousedown', ev => {
+  const gNode = ev.target.closest('.node');
+  const gLink = ev.target.closest('.link');
+  if (state.mode === 'select') {
+    if (gNode) {
+      const n = byId(gNode.dataset.id);
+      state.sel = { kind: 'node', id: n.id };
+      dragNode = n;
+      const w = toWorld(ev);
+      dragOff = { x: w.x - n.x, y: w.y - n.y };
+      renderProps(); renderCanvas();
+    } else if (gLink) {
+      state.sel = { kind: 'link', id: gLink.dataset.id };
+      renderProps(); renderCanvas();
+    } else {
+      state.sel = null; renderProps(); renderCanvas();
+      panning = { x: ev.clientX, y: ev.clientY, vx: state.view.x, vy: state.view.y };
+    }
+  } else if (state.mode === 'link') {
+    if (gNode) {
+      const id = gNode.dataset.id;
+      if (!state.linkSrc) { state.linkSrc = id; renderCanvas(); }
+      else if (state.linkSrc === id) { state.linkSrc = null; renderCanvas(); }
+      else {
+        const l = addLink(state.linkSrc, id);
+        state.linkSrc = null;
+        if (l) { state.schedule = null; toast('链路已创建', 'ok'); }
+        renderAll();
+      }
+    } else { state.linkSrc = null; renderCanvas(); }
+  } else if (state.mode === 'delete') {
+    if (gNode) deleteNode(gNode.dataset.id);
+    else if (gLink) deleteLink(gLink.dataset.id);
+  }
+});
+
+window.addEventListener('mousemove', ev => {
+  if (dragNode) {
+    const w = toWorld(ev);
+    dragNode.x = w.x - dragOff.x; dragNode.y = w.y - dragOff.y;
+    renderCanvas();
+  } else if (panning) {
+    state.view.x = panning.vx + (ev.clientX - panning.x);
+    state.view.y = panning.vy + (ev.clientY - panning.y);
+    renderCanvas();
+  }
+});
+window.addEventListener('mouseup', () => {
+  if (dragNode) { markDirty(); }
+  dragNode = null; panning = null;
+});
+
+svg.addEventListener('wheel', ev => {
+  ev.preventDefault();
+  const r = svg.getBoundingClientRect();
+  const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+  const k2 = Math.min(2.5, Math.max(0.3, state.view.k * (1 - ev.deltaY * 0.0012)));
+  state.view.x = mx - (mx - state.view.x) * k2 / state.view.k;
+  state.view.y = my - (my - state.view.y) * k2 / state.view.k;
+  state.view.k = k2;
+  $('#zoomPct').textContent = Math.round(k2 * 100) + '%';
+  renderCanvas();
+}, { passive: false });
+
+// palette drag & drop
+document.querySelectorAll('.pal-item').forEach(item => {
+  item.addEventListener('dragstart', ev => ev.dataTransfer.setData('text/plain', item.dataset.type));
+  item.addEventListener('click', () => {
+    const n = addNode(item.dataset.type, 200 + Math.random() * 160, 160 + Math.random() * 140);
+    state.sel = { kind: 'node', id: n.id };
+    renderAll(); setStatus(`已添加 ${n.name}（点击画布放置后可拖动）`);
+  });
+});
+svg.addEventListener('dragover', ev => ev.preventDefault());
+svg.addEventListener('drop', ev => {
+  ev.preventDefault();
+  const type = ev.dataTransfer.getData('text/plain');
+  if (type !== 'switch' && type !== 'device') return;
+  const w = toWorld(ev);
+  const n = addNode(type, w.x - 55, w.y - 27);
+  state.sel = { kind: 'node', id: n.id };
+  renderAll(); setStatus(`已添加 ${n.name}`);
+});
+
+// modes
+function setMode(m) {
+  state.mode = m; state.linkSrc = null;
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  const tips = { select: '', link: '连线模式：依次点击两个节点创建链路', delete: '删除模式：点击节点或链路删除' };
+  const tip = $('#modeTip');
+  tip.textContent = tips[m]; tip.classList.toggle('show', !!tips[m]);
+  renderCanvas();
+}
+document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+$('#zoomIn').onclick = () => { state.view.k = Math.min(2.5, state.view.k * 1.2); $('#zoomPct').textContent = Math.round(state.view.k * 100) + '%'; renderCanvas(); };
+$('#zoomOut').onclick = () => { state.view.k = Math.max(0.3, state.view.k / 1.2); $('#zoomPct').textContent = Math.round(state.view.k * 100) + '%'; renderCanvas(); };
+$('#zoomFit').onclick = fitView;
+function fitView() {
+  if (!state.nodes.length) { state.view = { x: 60, y: 40, k: 1 }; return updateZoomUi(); }
+  const xs = state.nodes.map(n => n.x), ys = state.nodes.map(n => n.y);
+  const w = $('#canvasWrap').clientWidth, h = $('#canvasWrap').clientHeight;
+  const bw = Math.max(...xs) + 130 - Math.min(...xs), bh = Math.max(...ys) + 70 - Math.min(...ys);
+  const k = Math.min(2, Math.min(w / bw, h / bh));
+  state.view.k = k;
+  state.view.x = (w - bw * k) / 2 - Math.min(...xs) * k;
+  state.view.y = (h - bh * k) / 2 - Math.min(...ys) * k;
+  updateZoomUi(); renderCanvas();
+}
+function updateZoomUi() { $('#zoomPct').textContent = Math.round(state.view.k * 100) + '%'; }
+
+window.addEventListener('keydown', ev => {
+  if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'SELECT') return;
+  if (ev.key === 'v' || ev.key === 'V') setMode('select');
+  else if (ev.key === 'l' || ev.key === 'L') setMode('link');
+  else if (ev.key === 'd' || ev.key === 'D') setMode('delete');
+  else if (ev.key === 'Escape') { state.linkSrc = null; setMode('select'); renderCanvas(); }
+  else if (ev.key === 'Delete' && state.sel) {
+    if (state.sel.kind === 'node') deleteNode(state.sel.id);
+    else deleteLink(state.sel.id);
+  }
+});
+
+// tabs
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  $('#tab-flows').classList.toggle('hidden', b.dataset.tab !== 'flows');
+  $('#tab-sched').classList.toggle('hidden', b.dataset.tab !== 'sched');
+});
+
+// header actions
+$('#btnGen').onclick = () => {
+  setStatus('正在计算调度…');
+  setTimeout(() => {
+    const ok = generateSchedule();
+    if (ok === true) {
+      renderScheduleTab();
+      document.querySelector('.tabs button[data-tab="sched"]').click();
+      toast(`调度生成完成：超周期 ${state.schedule.HP}µs，违规 ${state.schedule.viol} 项`, state.schedule.viol ? '' : 'ok');
+      setStatus(`调度完成 · 周期 ${state.schedule.T}µs · 超周期 ${state.schedule.HP}µs`);
+    } else setStatus('调度失败');
+  }, 30);
+};
+$('#btnDemo').onclick = () => loadDemo();
+$('#btnNew').onclick = () => {
+  if (!confirm('清空当前拓扑与流量？（未保存的工程将丢失）')) return;
+  localStorage.removeItem('tsn-studio');
+  state.nodes = []; state.links = []; state.flows = []; state.schedule = null; state.sel = null;
+  state.seq = { sw: 0, dev: 0, flow: 0 };
+  state.view = { x: 60, y: 40, k: 1 };
+  renderAll(); toast('已新建工程', 'ok');
+};
+$('#btnAddFlow').onclick = () => openFlowModal();
+$('#btnHelp').onclick = () => $('#helpModal').classList.add('open');
+$('#btnExport').onclick = e => { e.stopPropagation(); $('#exportMenu').classList.toggle('open'); };
+document.addEventListener('click', () => $('#exportMenu').classList.remove('open'));
+$('#expJson').onclick = exportTsnJson;
+$('#expXml').onclick = exportNetconfXml;
+$('#expRes').onclick = exportResultsJson;
+$('#expSave').onclick = () => {
+  download('tsn-project.json', JSON.stringify(serializeProject(), null, 2), 'application/json');
+  toast('工程已保存到本地文件', 'ok');
+};
+$('#expOpen').onclick = () => $('#fileOpen').click();
+$('#fileOpen').onchange = e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try { loadProject(JSON.parse(reader.result)); toast('工程已载入', 'ok'); }
+    catch (err) { toast('文件解析失败：' + err.message, 'err'); }
+  };
+  reader.readAsText(file); e.target.value = '';
+};
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('.overlay').classList.remove('open'));
+document.querySelectorAll('.overlay').forEach(o => o.addEventListener('mousedown', ev => { if (ev.target === o) o.classList.remove('open'); }));
+
+/* ================= Demo scenario ================= */
+function loadDemo() {
+  state.nodes = []; state.links = []; state.flows = []; state.schedule = null; state.sel = null;
+  state.seq = { sw: 0, dev: 0, flow: 0 };
+  state.settings = { cycle: 500, defProp: 1 };
+  const mk = (type, name, x, y, extra) => {
+    const base = type === 'switch'
+      ? { type, name, x, y, portSpeed: 125, gb: 10 }
+      : { type, name, x, y, packetSize: 1500, period: 1000, firstT1: 0, hardConstraint: 1000 };
+    const n = Object.assign({ id: 'n' + Math.random().toString(36).slice(2, 9) }, base, extra || {});
+    state.nodes.push(n); return n;
+  };
+  const sw1 = mk('switch', 'SW1', 330, 270);
+  const sw2 = mk('switch', 'SW2', 640, 270);
+  const plc = mk('device', 'PLC1', 210, 120, { packetSize: 1500, period: 500, firstT1: 0, hardConstraint: 300 });
+  const cam = mk('device', 'CAM1', 485, 90, { packetSize: 3000, period: 1000, firstT1: 0, hardConstraint: 800 });
+  const ctrl = mk('device', 'CTRL1', 485, 440);
+  const hmi = mk('device', 'HMI1', 800, 120);
+  const sensor = mk('device', 'SENSOR1', 160, 400, { packetSize: 1500, period: 1000, firstT1: 0, hardConstraint: 1000 });
+  const ln = (a, b) => { state.links.push({ id: 'l' + Math.random().toString(36).slice(2, 9), a: a.id, b: b.id, prop: 1 }); };
+  ln(plc, sw1); ln(cam, sw1); ln(ctrl, sw1); ln(sw1, sw2); ln(hmi, sw2); ln(sensor, sw1);
+  const fl = (name, src, dst, priority, packetSize, period, maxLatency) =>
+    state.flows.push({ id: 'f' + Math.random().toString(36).slice(2, 9), name, src: src.id, dst: dst.id, priority, packetSize, period, firstT1: 0, maxLatency });
+  fl('control', plc, ctrl, 0, 1500, 500, 300);
+  fl('video', cam, hmi, 1, 3000, 1000, 800);
+  fl('telemetry', sensor, hmi, 2, 1500, 1000, 1000);
+  state.seq = { sw: 2, dev: 5, flow: 3 };
+  fitView(); renderAll();
+  markDirty();
+  toast('示例拓扑已载入：2 交换机 / 5 端设备 / 3 条流量', 'ok');
+  setStatus('示例已载入，点击「⚡ 生成调度」');
+}
+
+/* ================= Init ================= */
+window.addEventListener('resize', renderCanvas);
+(function init() {
+  let restored = false;
+  try {
+    const saved = localStorage.getItem('tsn-studio');
+    if (saved) { loadProject(JSON.parse(saved)); restored = state.nodes.length > 0; }
+  } catch (e) {}
+  if (restored) { fitView(); toast('已恢复上次会话（顶部「新建」可清空）'); }
+  renderAll();
+  setStatus('就绪 · 拖入组件或点击「载入示例」');
+})();
+</script>
+</body>
+</html>

@@ -692,6 +692,7 @@ function renderCanvas() {
   svgEl('rect', { width: w, height: h, fill: 'url(#grid)' }, svg);
 
   const gView = svgEl('g', { transform: `translate(${state.view.x},${state.view.y}) scale(${state.view.k})` }, svg);
+  gLinks.innerHTML = ''; gNodes.innerHTML = '';   // 清空累积的历史元素，否则重绘出现残影
   gLinks.id = 'gLinks'; gNodes.id = 'gNodes';
   gView.appendChild(gLinks); gView.appendChild(gNodes);
   state.links.forEach(renderLink);
